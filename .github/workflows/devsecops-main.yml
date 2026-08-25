@@ -1,8 +1,9 @@
 name: DevSecOps Main Pipeline
 
 on:
+  workflow_dispatch:
   push:
-    branches: [ main, devsecops, k8s ]
+    branches: [ main, devsecops ]
     paths-ignore:
       - '**.md'
       - '.gitignore'
