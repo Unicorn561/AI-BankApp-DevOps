@@ -1,41 +1,26 @@
 name: DevSecOps Main Pipeline
 
 on:
-  workflow_dispatch:
   push:
     branches: [ main, devsecops ]
-    paths-ignore:
-      - '**.md'
-      - '.gitignore'
-      - 'LICENSE'
-      - 'screenshots/**'
-      - 'scripts/**'
-
-permissions:
-  id-token: write
-  contents: read
-  security-events: write
+  pull_request:
+    branches: [ main, devsecops ]
+  workflow_dispatch:
 
 jobs:
-  # ============================================================
-  # STAGE 1: CI - Security Scanning (SAST + SCA)
-  # ============================================================
   ci:
+    name: CI Security Scanning
     uses: ./.github/workflows/ci.yml
     secrets: inherit
 
-  # ============================================================
-  # STAGE 2: Build - Maven + Trivy + ECR Push
-  # ============================================================
   build:
+    name: Build & Container Security
     needs: ci
     uses: ./.github/workflows/build.yml
     secrets: inherit
 
-  # ============================================================
-  # STAGE 3: CD - Deploy + DAST
-  # ============================================================
   cd:
+    name: Continuous Deployment & DAST
     needs: build
     uses: ./.github/workflows/cd.yml
-    secrets: inherit# Run full DevSecOps flow
+    secrets: inherit
