@@ -58,3 +58,4 @@ jobs:
         run: |
           docker tag ai-bankapp:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+# Trigger pipeline update

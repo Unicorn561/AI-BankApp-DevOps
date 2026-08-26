@@ -38,4 +38,4 @@ jobs:
   cd:
     needs: build
     uses: ./.github/workflows/cd.yml
-    secrets: inherit
+    secrets: inherit# Run full DevSecOps flow
