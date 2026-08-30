@@ -9,28 +9,7 @@ jobs:
     name: Deploy to EC2 via SSH
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Create Remote Directory
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            mkdir -p ~/bankapp
-
-      - name: Copy app-tier.yml to EC2
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "app-tier.yml"
-          target: "~/bankapp"
-
-      - name: Deploy via SSH
+      - name: Deploy Container via SSH
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -38,23 +17,26 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             set -e
-            AWS_ACCOUNT_ID="120766981892"
-            AWS_REGION="us-west-2"
-            ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-            REPO_NAME="bankapp"
+            echo "Authenticating with Amazon ECR..."
+            aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 120766981892.dkr.ecr.us-west-2.amazonaws.com
 
-            echo "Logging into Amazon ECR..."
-            aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+            echo "Stopping and removing existing application container..."
+            docker stop bankapp 2>/dev/null || true
+            docker rm bankapp 2>/dev/null || true
 
-            echo "Pulling latest application image..."
-            docker pull ${ECR_REGISTRY}/${REPO_NAME}:latest
+            echo "Pulling latest image from ECR..."
+            docker pull 120766981892.dkr.ecr.us-west-2.amazonaws.com/bankapp:latest
 
-            cd ~/bankapp
-            echo "Starting containers via Docker Compose..."
-            docker compose -f app-tier.yml down || true
-            docker compose -f app-tier.yml up -d
+            echo "Launching bankapp container..."
+            docker run -d \
+              --name bankapp \
+              --restart always \
+              -p 8080:8080 \
+              -e SPRING_PROFILES_ACTIVE=prod \
+              -e OLLAMA_BASE_URL=http://172.31.38.112:11434 \
+              120766981892.dkr.ecr.us-west-2.amazonaws.com/bankapp:latest
 
-            echo "Waiting for service to start..."
+            echo "Waiting for container startup..."
             sleep 15
             docker ps
 
