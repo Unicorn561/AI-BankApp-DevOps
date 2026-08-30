@@ -1,47 +1,50 @@
+version: '3.8'
+
 services:
-  db:
+  mysql:
     image: mysql:8.0
-    container_name: db
+    container_name: bankapp-mysql
+    restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: bankappdb
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_USER: bankuser
+      MYSQL_PASSWORD: bankpassword
     ports:
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
-    restart: always
     networks:
       - bankapp-net
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
 
-  bankapp:
-    image: ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
+  app:
+    image: 120766981892.dkr.ecr.us-west-2.amazonaws.com/bankapp:latest
     container_name: bankapp
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
     ports:
       - "8080:8080"
     environment:
-      MYSQL_HOST: db
-      MYSQL_PORT: ${DB_PORT:-3306}
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-      OLLAMA_URL: ${OLLAMA_URL}
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: always
+      - SPRING_PROFILES_ACTIVE=prod
+      - MYSQL_HOST=bankapp-mysql
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=bankappdb
+      - MYSQL_USER=bankuser
+      - MYSQL_PASSWORD=bankpassword
+      - OLLAMA_BASE_URL=http://172.31.38.112:11434
     networks:
       - bankapp-net
+
+volumes:
+  mysql-data:
 
 networks:
   bankapp-net:
     driver: bridge
-
-volumes:
-  mysql-data:
